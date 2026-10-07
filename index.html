@@ -1,0 +1,1195 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Sky Catcher</title>
+
+<style>
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: Arial, sans-serif;
+  background: #07111f;
+  color: white;
+}
+
+body {
+  display: grid;
+  place-items: center;
+}
+
+.game {
+  position: relative;
+  width: min(100vw, 900px);
+  height: min(100vh, 650px);
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(73,171,255,.18), transparent 28%),
+    radial-gradient(circle at 80% 30%, rgba(146,90,255,.16), transparent 25%),
+    linear-gradient(180deg, #08182e, #0a1d35 55%, #06101e);
+  border: 1px solid rgba(255,255,255,.12);
+  box-shadow: 0 25px 70px rgba(0,0,0,.45);
+  touch-action: none;
+  user-select: none;
+}
+
+@media (min-width: 901px) {
+  .game {
+    border-radius: 24px;
+  }
+}
+
+/* Background stars */
+.stars-bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(circle, rgba(255,255,255,.8) 0 1px, transparent 1.5px),
+    radial-gradient(circle, rgba(255,255,255,.45) 0 1px, transparent 1.5px);
+  background-size: 97px 83px, 151px 127px;
+  background-position: 12px 20px, 40px 70px;
+  opacity: .45;
+}
+
+/* Mountains */
+.mountains {
+  position: absolute;
+  left: -5%;
+  right: -5%;
+  bottom: -2px;
+  height: 25%;
+  background: #071322;
+  clip-path: polygon(
+    0 100%,
+    0 62%,
+    12% 40%,
+    22% 65%,
+    35% 25%,
+    48% 62%,
+    60% 34%,
+    73% 70%,
+    85% 43%,
+    100% 67%,
+    100% 100%
+  );
+  pointer-events: none;
+}
+
+/* HUD */
+.hud {
+  position: absolute;
+  z-index: 20;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 16px;
+  pointer-events: none;
+}
+
+.hud-box {
+  min-width: 110px;
+  padding: 9px 13px;
+  border-radius: 14px;
+  background: rgba(3,12,24,.68);
+  border: 1px solid rgba(255,255,255,.12);
+  backdrop-filter: blur(8px);
+}
+
+.hud-label {
+  display: block;
+  font-size: 10px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: #8ea8c7;
+  margin-bottom: 2px;
+}
+
+.hud-value {
+  font-size: 22px;
+  font-weight: 800;
+}
+
+/* Timer progress */
+.progress {
+  position: absolute;
+  z-index: 21;
+  top: 0;
+  left: 0;
+  height: 4px;
+  width: 100%;
+  background: #63c5ff;
+  box-shadow: 0 0 12px #63c5ff;
+  transform-origin: left;
+  pointer-events: none;
+}
+
+/* Start/result screens */
+.screen {
+  position: absolute;
+  z-index: 50;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(2,8,18,.55);
+  backdrop-filter: blur(6px);
+}
+
+.panel {
+  width: min(470px, 100%);
+  text-align: center;
+  padding: 34px 28px;
+  border-radius: 26px;
+  background: rgba(8,24,45,.94);
+  border: 1px solid rgba(111,202,255,.24);
+  box-shadow: 0 20px 60px rgba(0,0,0,.38);
+}
+
+.logo {
+  font-size: 52px;
+  line-height: 1;
+  margin-bottom: 12px;
+}
+
+h1 {
+  margin: 0 0 8px;
+  font-size: clamp(34px, 7vw, 54px);
+  letter-spacing: -.04em;
+}
+
+.subtitle {
+  margin: 0 auto 24px;
+  max-width: 390px;
+  color: #a9bdd7;
+  line-height: 1.55;
+}
+
+.rules {
+  display: grid;
+  gap: 9px;
+  text-align: left;
+  margin: 0 auto 24px;
+  max-width: 370px;
+}
+
+.rule {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  color: #dce9f8;
+  font-size: 14px;
+}
+
+.rule-icon {
+  width: 31px;
+  height: 31px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 31px;
+  border-radius: 9px;
+  background: rgba(255,255,255,.07);
+}
+
+button {
+  border: 0;
+  border-radius: 15px;
+  padding: 14px 27px;
+  color: #03101c;
+  background: linear-gradient(135deg, #77d5ff, #68a8ff);
+  font: inherit;
+  font-weight: 850;
+  font-size: 16px;
+  cursor: pointer;
+  box-shadow: 0 9px 25px rgba(77,174,255,.25);
+}
+
+button:active {
+  transform: scale(.97);
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* Falling objects */
+.item {
+  position: absolute;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.star {
+  width: 30px;
+  height: 30px;
+  color: #ffe878;
+  filter: drop-shadow(0 0 10px rgba(255,224,82,.9));
+  font-size: 30px;
+  line-height: 1;
+}
+
+.meteor {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background:
+    radial-gradient(
+      circle at 35% 30%,
+      #ffb28c 0 10%,
+      #f55c57 32%,
+      #a92742 68%,
+      #421735 100%
+    );
+  box-shadow: 0 0 15px rgba(255,75,78,.65);
+}
+
+.meteor::after {
+  content: "";
+  position: absolute;
+  width: 44px;
+  height: 8px;
+  right: 18px;
+  top: 16px;
+  border-radius: 50%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255,124,91,.6)
+  );
+  transform: rotate(25deg);
+  filter: blur(2px);
+}
+
+/* Player catcher */
+.catcher {
+  position: absolute;
+  z-index: 15;
+  bottom: 32px;
+  left: 50%;
+  width: 92px;
+  height: 28px;
+  border-radius: 10px 10px 20px 20px;
+  background: linear-gradient(180deg, #76d4ff, #3177df);
+  box-shadow: 0 0 22px rgba(74,181,255,.5);
+  pointer-events: none;
+}
+
+.catcher::before {
+  content: "";
+  position: absolute;
+  left: 13px;
+  right: 13px;
+  top: -7px;
+  height: 11px;
+  border-radius: 10px;
+  border: 3px solid #8ce0ff;
+  border-bottom: 0;
+}
+
+.hint {
+  position: absolute;
+  z-index: 18;
+  bottom: 7px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  color: rgba(190,215,240,.6);
+  font-size: 11px;
+  pointer-events: none;
+}
+
+/* Score popup */
+.combo {
+  position: absolute;
+  z-index: 30;
+  pointer-events: none;
+  font-weight: 900;
+  color: #fff2a1;
+  text-shadow: 0 2px 12px rgba(255,216,70,.7);
+  animation: pop .45s ease-out forwards;
+}
+
+@keyframes pop {
+  0% {
+    opacity: 0;
+    transform: translateY(5px) scale(.7);
+  }
+
+  30% {
+    opacity: 1;
+    transform: translateY(-3px) scale(1.15);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(-35px) scale(1);
+  }
+}
+
+.result-score {
+  font-size: 62px;
+  font-weight: 900;
+  line-height: 1;
+  margin: 8px 0 6px;
+  color: #7dd7ff;
+  text-shadow: 0 0 25px rgba(75,190,255,.4);
+}
+
+.result-message {
+  color: #b8cbe1;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 500px) {
+  .game {
+    height: 100dvh;
+  }
+
+  .hud {
+    padding: 12px;
+  }
+
+  .hud-box {
+    min-width: 92px;
+    padding: 8px 10px;
+  }
+
+  .hud-value {
+    font-size: 19px;
+  }
+
+  .panel {
+    padding: 28px 20px;
+  }
+
+  .logo {
+    font-size: 44px;
+  }
+
+  .catcher {
+    bottom: 38px;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div class="game" id="game">
+
+  <div class="stars-bg"></div>
+  <div class="mountains"></div>
+
+  <!-- HUD -->
+  <div class="hud hidden" id="hud">
+
+    <div class="hud-box">
+      <span class="hud-label">Счёт</span>
+      <span class="hud-value" id="score">0</span>
+    </div>
+
+    <div class="hud-box" style="text-align:right">
+      <span class="hud-label">Время</span>
+      <span class="hud-value" id="time">30</span>
+    </div>
+
+  </div>
+
+  <div class="progress hidden" id="progress"></div>
+
+  <div class="catcher hidden" id="catcher"></div>
+
+  <div class="hint hidden" id="hint">
+    Веди ловушку мышью или пальцем
+  </div>
+
+  <!-- START SCREEN -->
+  <section class="screen" id="startScreen">
+
+    <div class="panel">
+
+      <div class="logo">🌠</div>
+
+      <h1>Sky Catcher</h1>
+
+      <p class="subtitle">
+        Поймай как можно больше звёзд за одну космическую ночь.
+      </p>
+
+      <div class="rules">
+
+        <div class="rule">
+          <span class="rule-icon">⭐</span>
+          <span>Звезда = <b>+10 очков</b></span>
+        </div>
+
+        <div class="rule">
+          <span class="rule-icon">☄️</span>
+          <span>Метеор = <b>−5 очков</b></span>
+        </div>
+
+        <div class="rule">
+          <span class="rule-icon">⏱️</span>
+          <span>Раунд длится <b>30 секунд</b></span>
+        </div>
+
+        <div class="rule">
+          <span class="rule-icon">🖱️</span>
+          <span>Двигай ловушку мышью или пальцем</span>
+        </div>
+
+      </div>
+
+      <button id="startBtn">
+        Начать игру
+      </button>
+
+    </div>
+
+  </section>
+
+  <!-- RESULT SCREEN -->
+  <section class="screen hidden" id="resultScreen">
+
+    <div class="panel">
+
+      <div class="logo" id="resultIcon">🏆</div>
+
+      <h1 id="resultTitle">
+        Раунд окончен
+      </h1>
+
+      <div class="result-score" id="finalScore">
+        0
+      </div>
+
+      <div class="result-message" id="resultMessage">
+        Неплохой улов!
+      </div>
+
+      <button id="restartBtn">
+        Заново
+      </button>
+
+    </div>
+
+  </section>
+
+</div>
+
+<script>
+(() => {
+
+  "use strict";
+
+  const game = document.getElementById("game");
+
+  const startScreen =
+    document.getElementById("startScreen");
+
+  const resultScreen =
+    document.getElementById("resultScreen");
+
+  const startBtn =
+    document.getElementById("startBtn");
+
+  const restartBtn =
+    document.getElementById("restartBtn");
+
+  const hud =
+    document.getElementById("hud");
+
+  const scoreEl =
+    document.getElementById("score");
+
+  const timeEl =
+    document.getElementById("time");
+
+  const progress =
+    document.getElementById("progress");
+
+  const catcher =
+    document.getElementById("catcher");
+
+  const hint =
+    document.getElementById("hint");
+
+  const finalScore =
+    document.getElementById("finalScore");
+
+  const resultTitle =
+    document.getElementById("resultTitle");
+
+  const resultMessage =
+    document.getElementById("resultMessage");
+
+  const resultIcon =
+    document.getElementById("resultIcon");
+
+
+  const ROUND_TIME = 30;
+
+  const CATCHER_W = 92;
+
+
+  let state = "start";
+
+  let score = 0;
+
+  let remaining = ROUND_TIME;
+
+  let lastTime = 0;
+
+  let spawnAccumulator = 0;
+
+  let animationId = null;
+
+  let timerId = null;
+
+  let objects = [];
+
+  let catcherX = 0;
+
+
+  /*
+    Полностью останавливаем старые таймеры.
+    Это важно при повторном запуске игры.
+  */
+  function resetAllTimers() {
+
+    if (animationId !== null) {
+      cancelAnimationFrame(animationId);
+    }
+
+    if (timerId !== null) {
+      clearInterval(timerId);
+    }
+
+    animationId = null;
+    timerId = null;
+  }
+
+
+  /*
+    Удаляем все падающие объекты.
+  */
+  function clearObjects() {
+
+    objects.forEach(object => {
+      object.el.remove();
+    });
+
+    objects = [];
+  }
+
+
+  /*
+    Полный сброс игры.
+  */
+  function resetGame() {
+
+    resetAllTimers();
+
+    clearObjects();
+
+    state = "start";
+
+    score = 0;
+
+    remaining = ROUND_TIME;
+
+    spawnAccumulator = 0;
+
+    scoreEl.textContent = "0";
+
+    timeEl.textContent = ROUND_TIME;
+
+    progress.style.transform = "scaleX(1)";
+
+    hud.classList.add("hidden");
+
+    progress.classList.add("hidden");
+
+    catcher.classList.add("hidden");
+
+    hint.classList.add("hidden");
+
+    resultScreen.classList.add("hidden");
+
+    startScreen.classList.remove("hidden");
+  }
+
+
+  /*
+    Начало нового раунда.
+  */
+  function startGame() {
+
+    resetAllTimers();
+
+    clearObjects();
+
+    state = "playing";
+
+    score = 0;
+
+    remaining = ROUND_TIME;
+
+    spawnAccumulator = 0;
+
+    scoreEl.textContent = "0";
+
+    timeEl.textContent = ROUND_TIME;
+
+    progress.style.transform = "scaleX(1)";
+
+    startScreen.classList.add("hidden");
+
+    resultScreen.classList.add("hidden");
+
+    hud.classList.remove("hidden");
+
+    progress.classList.remove("hidden");
+
+    catcher.classList.remove("hidden");
+
+    hint.classList.remove("hidden");
+
+
+    catcherX =
+      (game.clientWidth - CATCHER_W) / 2;
+
+    updateCatcher();
+
+
+    lastTime = performance.now();
+
+    animationId =
+      requestAnimationFrame(loop);
+
+
+    /*
+      Отдельный таймер отсчитывает секунды.
+    */
+    timerId = setInterval(() => {
+
+      if (state !== "playing") {
+        return;
+      }
+
+      remaining--;
+
+      timeEl.textContent = remaining;
+
+      progress.style.transform =
+        `scaleX(${Math.max(
+          0,
+          remaining / ROUND_TIME
+        )})`;
+
+
+      if (remaining <= 0) {
+        finishGame();
+      }
+
+    }, 1000);
+  }
+
+
+  /*
+    Завершение игры.
+    После этого state !== playing,
+    поэтому очки больше получить невозможно.
+  */
+  function finishGame() {
+
+    if (state !== "playing") {
+      return;
+    }
+
+    state = "finished";
+
+    resetAllTimers();
+
+    clearObjects();
+
+    hud.classList.add("hidden");
+
+    progress.classList.add("hidden");
+
+    catcher.classList.add("hidden");
+
+    hint.classList.add("hidden");
+
+
+    finalScore.textContent = score;
+
+
+    if (score >= 220) {
+
+      resultIcon.textContent = "🌟";
+
+      resultTitle.textContent =
+        "Космический профи!";
+
+      resultMessage.textContent =
+        "Ты собрал огромное количество звёзд.";
+
+    } else if (score >= 120) {
+
+      resultIcon.textContent = "🏆";
+
+      resultTitle.textContent =
+        "Отличный улов!";
+
+      resultMessage.textContent =
+        "Ты хорошо справился с метеорным дождём.";
+
+    } else if (score >= 50) {
+
+      resultIcon.textContent = "✨";
+
+      resultTitle.textContent =
+        "Неплохо!";
+
+      resultMessage.textContent =
+        "Ещё одна попытка — и результат будет выше.";
+
+    } else {
+
+      resultIcon.textContent = "🌙";
+
+      resultTitle.textContent =
+        "Ночь закончилась";
+
+      resultMessage.textContent =
+        "Попробуй двигаться активнее и ловить больше звёзд.";
+    }
+
+
+    resultScreen.classList.remove("hidden");
+  }
+
+
+  /*
+    Обновление позиции ловушки.
+  */
+  function updateCatcher() {
+
+    const maxX =
+      Math.max(
+        0,
+        game.clientWidth - CATCHER_W
+      );
+
+    catcherX =
+      Math.max(
+        0,
+        Math.min(maxX, catcherX)
+      );
+
+    catcher.style.left =
+      catcherX + "px";
+
+    catcher.style.transform =
+      "none";
+  }
+
+
+  /*
+    Перемещение мышью или пальцем.
+  */
+  function moveCatcher(clientX) {
+
+    if (state !== "playing") {
+      return;
+    }
+
+    const rect =
+      game.getBoundingClientRect();
+
+    catcherX =
+      clientX -
+      rect.left -
+      CATCHER_W / 2;
+
+    updateCatcher();
+  }
+
+
+  /*
+    Создание звезды или метеора.
+  */
+  function spawnObject() {
+
+    if (state !== "playing") {
+      return;
+    }
+
+    const isStar =
+      Math.random() < 0.72;
+
+    const size =
+      isStar ? 30 : 34;
+
+    const el =
+      document.createElement("div");
+
+    el.className = "item";
+
+
+    if (isStar) {
+
+      el.innerHTML =
+        '<div class="star">★</div>';
+
+    } else {
+
+      el.innerHTML =
+        '<div class="meteor"></div>';
+    }
+
+
+    const maxX =
+      Math.max(
+        1,
+        game.clientWidth - size
+      );
+
+    const x =
+      Math.random() * maxX;
+
+    const y =
+      -size - 5;
+
+
+    el.style.width =
+      size + "px";
+
+    el.style.height =
+      size + "px";
+
+    el.style.left =
+      x + "px";
+
+    el.style.top =
+      y + "px";
+
+
+    game.appendChild(el);
+
+
+    objects.push({
+
+      el,
+
+      x,
+
+      y,
+
+      size,
+
+      speed:
+        135 +
+        Math.random() * 100 +
+        (ROUND_TIME - remaining) * 2.5,
+
+      type:
+        isStar
+          ? "star"
+          : "meteor"
+    });
+  }
+
+
+  /*
+    Добавление очков.
+  */
+  function addScore(amount, x, y) {
+
+    /*
+      Защита от получения очков после окончания.
+    */
+    if (state !== "playing") {
+      return;
+    }
+
+    score =
+      Math.max(
+        0,
+        score + amount
+      );
+
+    scoreEl.textContent =
+      score;
+
+
+    const popup =
+      document.createElement("div");
+
+    popup.className =
+      "combo";
+
+    popup.textContent =
+      amount > 0
+        ? "+" + amount
+        : amount;
+
+    popup.style.left =
+      x + "px";
+
+    popup.style.top =
+      y + "px";
+
+
+    game.appendChild(popup);
+
+
+    setTimeout(() => {
+      popup.remove();
+    }, 460);
+  }
+
+
+  /*
+    Проверка столкновения объекта
+    с ловушкой.
+  */
+  function overlaps(a, b) {
+
+    return (
+
+      a.x <
+        b.x + CATCHER_W &&
+
+      a.x + a.size >
+        b.x &&
+
+      a.y <
+        b.y + 28 &&
+
+      a.y + a.size >
+        b.y
+    );
+  }
+
+
+  /*
+    Главный игровой цикл.
+  */
+  function loop(now) {
+
+    if (state !== "playing") {
+      return;
+    }
+
+
+    const dt =
+      Math.min(
+        0.035,
+        (now - lastTime) / 1000
+      );
+
+    lastTime = now;
+
+
+    spawnAccumulator += dt;
+
+
+    /*
+      Чем дольше игра продолжается,
+      тем чаще появляются объекты.
+    */
+    const spawnInterval =
+      Math.max(
+        0.28,
+        0.72 -
+        (ROUND_TIME - remaining) * 0.009
+      );
+
+
+    if (spawnAccumulator >= spawnInterval) {
+
+      spawnAccumulator = 0;
+
+      spawnObject();
+    }
+
+
+    const catcherRect = {
+
+      x: catcherX,
+
+      y:
+        game.clientHeight -
+        32 -
+        28
+    };
+
+
+    /*
+      Обновляем каждый объект.
+    */
+    for (
+      let i = objects.length - 1;
+      i >= 0;
+      i--
+    ) {
+
+      const object =
+        objects[i];
+
+
+      object.y +=
+        object.speed * dt;
+
+
+      object.el.style.transform =
+        `translate3d(
+          0,
+          ${object.y}px,
+          0
+        )`;
+
+
+      /*
+        Если поймали объект.
+      */
+      if (
+        overlaps(
+          object,
+          catcherRect
+        )
+      ) {
+
+        addScore(
+          object.type === "star"
+            ? 10
+            : -5,
+          object.x,
+          object.y
+        );
+
+
+        object.el.remove();
+
+        objects.splice(i, 1);
+
+        continue;
+      }
+
+
+      /*
+        Объект улетел за экран.
+      */
+      if (
+        object.y >
+        game.clientHeight + 50
+      ) {
+
+        object.el.remove();
+
+        objects.splice(i, 1);
+      }
+    }
+
+
+    animationId =
+      requestAnimationFrame(loop);
+  }
+
+
+  /*
+    Pointer Events позволяют
+    использовать и мышь, и сенсор.
+  */
+  game.addEventListener(
+    "pointerdown",
+    event => {
+
+      if (state === "playing") {
+
+        moveCatcher(
+          event.clientX
+        );
+
+        try {
+          game.setPointerCapture(
+            event.pointerId
+          );
+        } catch (_) {}
+      }
+    }
+  );
+
+
+  game.addEventListener(
+    "pointermove",
+    event => {
+
+      if (state === "playing") {
+
+        moveCatcher(
+          event.clientX
+        );
+      }
+    }
+  );
+
+
+  startBtn.addEventListener(
+    "click",
+    startGame
+  );
+
+
+  restartBtn.addEventListener(
+    "click",
+    startGame
+  );
+
+
+  /*
+    Адаптация при изменении размера окна.
+  */
+  window.addEventListener(
+    "resize",
+    () => {
+
+      if (state === "playing") {
+
+        catcherX =
+          Math.min(
+            catcherX,
+            game.clientWidth - CATCHER_W
+          );
+
+        updateCatcher();
+      }
+    }
+  );
+
+
+  /*
+    Начальное состояние.
+  */
+  resetGame();
+
+})();
+</script>
+
+</body>
+</html>
